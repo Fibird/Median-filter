@@ -2,9 +2,8 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <memory.h>
-#include <algorithm>
 
-#define N 16 * 1024
+#define N 33 * 1024
 #define threadsPerBlock 256
 #define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
@@ -56,6 +55,7 @@ __global__ void _medianfilter(const element* signal, element* result)
 void medianfilter(element* signal, element* result)
 {
 	element *dev_extension, *dev_result;
+
 	//   Check arguments
 	if (!signal || N < 1)
 		return;
@@ -81,15 +81,14 @@ void medianfilter(element* signal, element* result)
 
 	cudaMalloc((void**)&dev_extension, (N + 2 * RADIUS) * sizeof(int));
 	cudaMalloc((void**)&dev_result, N * sizeof(int));
-	
+
 	// Copies signal to device
 	cudaMemcpy(dev_extension, extension, (N + 2 * RADIUS) * sizeof(element), cudaMemcpyHostToDevice);
 	//   Call median filter implementation
 	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension, dev_result);
 	// Copies result to host
 	cudaMemcpy(result, dev_result, N * sizeof(element), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < N; i ++)
-		printf("%d ", result[i]);
+
 	// Free memory
 	free(extension);
 	cudaFree(dev_extension);
@@ -99,6 +98,12 @@ void medianfilter(element* signal, element* result)
 int main()
 {
 	int *Signal, *result;
+	float elapsedTime;
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	FILE *fp;
+	
 	Signal = (int *)malloc(N * sizeof(int));
 	result = (element *)malloc(N * sizeof(element));
 	
@@ -106,8 +111,18 @@ int main()
 	{
 		Signal[i] = i % 5 + 1;
 	}
-		
+	cudaEventRecord(start, 0);
 	medianfilter(Signal, result);
-	
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	printf("%lf.3 ms\n", elapsedTime);
+
+	fp = fopen("result.txt", "w");
+	if (fp == NULL)
+		printf("OPEN FILE FAILS!\n");
+	for (int i = 0; i < N; i ++)
+		fprintf(fp, "%d ", result[i]);
+
 	return 0;
 }
