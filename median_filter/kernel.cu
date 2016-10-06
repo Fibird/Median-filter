@@ -18,7 +18,7 @@ typedef int element;
 
 __global__ void _medianfilter(const element* signal, element* result)
 {
-	element window[8];
+	element window[5];
 	__shared__ element cache[threadsPerBlock + 2 * RADIUS];
 	int gindex = threadIdx.x + blockDim.x * blockIdx.x;
 	int lindex = threadIdx.x + RADIUS;
@@ -87,7 +87,7 @@ void medianfilter(element* signal, element* result)
 	//   Call median filter implementation
 	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension, dev_result);
 	// Copies result to host
-	cudaMemcpy(result, dev_extension + 2, N * sizeof(element), cudaMemcpyDeviceToHost);
+	cudaMemcpy(result, dev_result, N * sizeof(element), cudaMemcpyDeviceToHost);
 	for (int i = 0; i < N; i ++)
 		printf("%d ", result[i]);
 	// Free memory
