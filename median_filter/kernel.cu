@@ -4,7 +4,7 @@
 #include <memory.h>
 #include <algorithm>
 
-#define N 33 * 1024
+#define N 16 * 1024
 #define threadsPerBlock 256
 #define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
@@ -18,8 +18,8 @@ typedef int element;
 
 __global__ void _medianfilter(const element* signal, element* result)
 {
-	element window[5];
 	__shared__ element cache[threadsPerBlock + 2 * RADIUS];
+	element window[5];
 	int gindex = threadIdx.x + blockDim.x * blockIdx.x;
 	int lindex = threadIdx.x + RADIUS;
 	// Reads input elements into shared memory
@@ -55,6 +55,7 @@ __global__ void _medianfilter(const element* signal, element* result)
 //     N      - length of the signal
 void medianfilter(element* signal, element* result)
 {
+	element *dev_extension, *dev_result;
 	//   Check arguments
 	if (!signal || N < 1)
 		return;
@@ -78,9 +79,8 @@ void medianfilter(element* signal, element* result)
 		extension[N + 2 + i] = signal[N - 1 - i];
 	}
 
-	element *dev_extension, *dev_result;
-	dev_extension = (element *)cudaMalloc((void**)&dev_extension, (N + 2 * RADIUS) * sizeof(int));
-	dev_result = (int *)cudaMalloc((void**)&dev_result, N * sizeof(int));
+	cudaMalloc((void**)&dev_extension, (N + 2 * RADIUS) * sizeof(int));
+	cudaMalloc((void**)&dev_result, N * sizeof(int));
 	
 	// Copies signal to device
 	cudaMemcpy(dev_extension, extension, (N + 2 * RADIUS) * sizeof(element), cudaMemcpyHostToDevice);
@@ -101,9 +101,12 @@ int main()
 	int *Signal, *result;
 	Signal = (int *)malloc(N * sizeof(int));
 	result = (element *)malloc(N * sizeof(element));
-	//fill_n(Signal, N, 1);
+	
 	for (int i = 0; i < N; i++)
-		Signal[i] = 1;
+	{
+		Signal[i] = i % 5 + 1;
+	}
+		
 	medianfilter(Signal, result);
 	
 	return 0;
