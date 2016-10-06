@@ -123,5 +123,6 @@ int main()
 	for (int i = 0; i < N; i ++)
 		fprintf(fp, "%d ", result[i]);
 
+	fclose(fp);
 	return 0;
 }
