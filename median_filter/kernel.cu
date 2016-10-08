@@ -11,22 +11,22 @@ typedef int element;
 //   1D MEDIAN FILTER implementation
 //     signal - input signal
 //     result - output signal
-//     N      - length of the signal
-void _medianfilter(const element* signal, element* result)
+//     L      - length of the signal
+void _medianfilter(const element* signal, element* result, int L)
 {
 	//   Move window through all elements of the signal
-	for (int i = 2; i < N - 2; ++i)
+	for (int i = 2; i < L - RADIUS; ++i)
 	{
 		//   Pick up window elements
-		element window[5];
-		for (int j = 0; j < 5; ++j)
-			window[j] = signal[i - 2 + j];
+		element window[2 * RADIUS + 1];
+		for (int j = 0; j < 2 * RADIUS + 1; ++j)
+			window[j] = signal[i - RADIUS + j];
 		//   Order elements (only half of them)
-		for (int j = 0; j < 3; ++j)
+		for (int j = 0; j < RADIUS + 1; ++j)
 		{
 			//   Find position of minimum element
 			int min = j;
-			for (int k = j + 1; k < 5; ++k)
+			for (int k = j + 1; k < 2 * RADIUS + 1; ++k)
 				if (window[k] < window[min])
 					min = k;
 			//   Put found minimum element in its place
@@ -35,7 +35,7 @@ void _medianfilter(const element* signal, element* result)
 			window[min] = temp;
 		}
 		//   Get result - the middle element
-		result[i - 2] = window[2];
+		result[i - RADIUS] = window[RADIUS];
 	}
 }
 
@@ -56,19 +56,19 @@ void medianfilter(element* signal, element* result)
 		return;
 	}
 	//   Allocate memory for signal extension
-	element* extension = new element[N + 4];
+	element* extension = new element[N + 2 * RADIUS];
 	//   Check memory allocation
 	if (!extension)
 		return;
 	//   Create signal extension
-	memcpy(extension + 2, signal, N * sizeof(element));
-	for (int i = 0; i < 2; ++i)
+	memcpy(extension + RADIUS, signal, N * sizeof(element));
+	for (int i = 0; i < RADIUS; ++i)
 	{
 		extension[i] = signal[1 - i];
-		extension[N + 2 + i] = signal[N - 1 - i];
+		extension[N + RADIUS + i] = signal[N - 1 - i];
 	}
 	//   Call median filter implementation
-	_medianfilter(extension, result ? result : signal);
+	_medianfilter(extension, result ? result : signal, N + 2 * RADIUS);
 	//   Free memory
 	delete[] extension;
 }
@@ -94,12 +94,12 @@ int main()
 	
 	elapsedTime = 1000 * ((float) (stop - start)) / CLOCKS_PER_SEC;
 	
-	printf("%lf.3 ms\n", elapsedTime);
+	printf("%lf ms\n", elapsedTime);
 
 	fp = fopen("result.txt", "w");
 	if (fp == NULL)
 		printf("OPEN FILE FAILS!\n");
-	for (int i = 0; i < N; i ++)
+	for (int i = 0; i < N; i++)
 		fprintf(fp, "%d ", result[i]);
 
 	fclose(fp);
