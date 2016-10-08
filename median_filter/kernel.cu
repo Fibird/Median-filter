@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define N 33 * 1024
+#define N 10 * 1024
 #define threadsPerBlock 256
 #define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
@@ -28,14 +28,14 @@ __global__ void _medianfilter(const element* signal, element* result)
 		cache[lindex + threadsPerBlock] = signal[gindex + threadsPerBlock];
 	}
 	__syncthreads();
-	for (int j = 0; j < 5; ++j)
+	for (int j = 0; j < 2 * RADIUS + 1; ++j)
 		window[j] = cache[threadIdx.x  + j];
 	// Orders elements (only half of them)
-	for (int j = 0; j < 3; ++j)
+	for (int j = 0; j < RADIUS + 1; ++j)
 	{
 		// Finds position of minimum element
 		int min = j;
-		for (int k = j + 1; k < 5; ++k)
+		for (int k = j + 1; k < 2 * RADIUS + 1; ++k)
 			if (window[k] < window[min])
 				min = k;
 		// Puts found minimum element in its place
@@ -44,7 +44,7 @@ __global__ void _medianfilter(const element* signal, element* result)
 		window[min] = temp;
 	}
 	// Gets result - the middle element
-	result[gindex] = window[2];
+	result[gindex] = window[RADIUS];
 }
 
 //   1D MEDIAN FILTER wrapper
@@ -72,10 +72,10 @@ void medianfilter(element* signal, element* result)
 		return;
 	//   Create signal extension
 	cudaMemcpy(extension + 2, signal, N * sizeof(element), cudaMemcpyHostToHost);
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < RADIUS; ++i)
 	{
 		extension[i] = signal[1 - i];
-		extension[N + 2 + i] = signal[N - 1 - i];
+		extension[N + RADIUS + i] = signal[N - 1 - i];
 	}
 
 	cudaMalloc((void**)&dev_extension, (N + 2 * RADIUS) * sizeof(int));
