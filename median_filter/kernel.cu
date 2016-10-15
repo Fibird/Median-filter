@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#define N 10 * 1024
+#define N 33 * 1024
 #define threadsPerBlock 256
 #define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
@@ -29,7 +29,7 @@ __global__ void _medianfilter(const element* signal, element* result)
 	}
 	__syncthreads();
 	for (int j = 0; j < 2 * RADIUS + 1; ++j)
-		window[j] = cache[threadIdx.x  + j];
+		window[j] = cache[threadIdx.x + j];
 	// Orders elements (only half of them)
 	for (int j = 0; j < RADIUS + 1; ++j)
 	{
@@ -84,7 +84,7 @@ void medianfilter(element* signal, element* result)
 	// Copies signal to device
 	cudaMemcpy(dev_extension, extension, (N + 2 * RADIUS) * sizeof(element), cudaMemcpyHostToDevice);
 	//   Call median filter implementation
-	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension, dev_result);
+	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension + RADIUS, dev_result);
 	// Copies result to host
 	cudaMemcpy(result, dev_result, N * sizeof(element), cudaMemcpyDeviceToHost);
 
