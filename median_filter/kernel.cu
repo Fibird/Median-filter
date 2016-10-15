@@ -16,35 +16,30 @@ typedef int element;
 
 __global__ void _medianfilter(const element* signal, element* result)
 {
-	__shared__ element cache[threadsPerBlock + 2 * RADIUS];
 	element window[5];
 	int gindex = threadIdx.x + blockDim.x * blockIdx.x;
-	int lindex = threadIdx.x + RADIUS;
-	// Reads input elements into shared memory
-	cache[lindex] = signal[gindex];
-	if (threadIdx.x < RADIUS)
+	
+	while (gindex < N)
 	{
-		cache[lindex - RADIUS] = signal[gindex - RADIUS];
-		cache[lindex + threadsPerBlock] = signal[gindex + threadsPerBlock];
+		for (int j = 0; j < 2 * RADIUS + 1; ++j)
+			window[j] = signal[gindex + j];
+		// Orders elements (only half of them)
+		for (int j = 0; j < RADIUS + 1; ++j)
+		{
+			// Finds position of minimum element
+			int min = j;
+			for (int k = j + 1; k < 2 * RADIUS + 1; ++k)
+				if (window[k] < window[min])
+					min = k;
+			// Puts found minimum element in its place
+			const element temp = window[j];
+			window[j] = window[min];
+			window[min] = temp;
+		}
+		// Gets result - the middle element
+		result[gindex] = window[RADIUS];
+		gindex += blockDim.x * gridDim.x; 
 	}
-	__syncthreads();
-	for (int j = 0; j < 2 * RADIUS + 1; ++j)
-		window[j] = cache[threadIdx.x + j];
-	// Orders elements (only half of them)
-	for (int j = 0; j < RADIUS + 1; ++j)
-	{
-		// Finds position of minimum element
-		int min = j;
-		for (int k = j + 1; k < 2 * RADIUS + 1; ++k)
-			if (window[k] < window[min])
-				min = k;
-		// Puts found minimum element in its place
-		const element temp = window[j];
-		window[j] = window[min];
-		window[min] = temp;
-	}
-	// Gets result - the middle element
-	result[gindex] = window[RADIUS];
 }
 
 //   1D MEDIAN FILTER wrapper
@@ -84,7 +79,7 @@ void medianfilter(element* signal, element* result)
 	// Copies signal to device
 	cudaMemcpy(dev_extension, extension, (N + 2 * RADIUS) * sizeof(element), cudaMemcpyHostToDevice);
 	//   Call median filter implementation
-	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension + RADIUS, dev_result);
+	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension, dev_result);
 	// Copies result to host
 	cudaMemcpy(result, dev_result, N * sizeof(element), cudaMemcpyDeviceToHost);
 
