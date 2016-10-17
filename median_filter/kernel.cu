@@ -1,13 +1,14 @@
 #include "cuda_runtime.h"
 #include <stdio.h>
 #include <memory.h>
+#include <opencv2\core.hpp>
+#include <opencv2\highgui\highgui.hpp>
 
-#define N 33 * 1024
 #define threadsPerBlock 256
-#define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
+
 // Signal/image element type
-typedef int element;
+typedef unsigned char element;
 //   1D MEDIAN FILTER implementation
 //     signal - input signal
 //     result - output signal
@@ -51,7 +52,7 @@ __global__ void _medianfilter(const element* signal, element* result)
 //     signal - input signal
 //     result - output signal
 //     N      - length of the signal
-void medianfilter(element* signal, element* result)
+void medianfilter(element* signal, element* result, int N)
 {
 	element *dev_extension, *dev_result;
 
@@ -96,33 +97,25 @@ void medianfilter(element* signal, element* result)
 
 int main()
 {
-	int *Signal, *result;
+	IplImage *ImgSrc = cvLoadImage("sample_corrupted.bmp", CV_LOAD_IMAGE_GRAYSCALE);
+	IplImage *ImgReal = cvLoadImage("sample.bmp", CV_LOAD_IMAGE_GRAYSCALE);
+	IplImage *ImgDst_CPU = cvCreateImage(cvGetSize(ImgSrc), IPL_DEPTH_8U, 1);
+	int Size = ImgSrc->width * ImgSrc->height;
+	unsigned char *pSrcData = (unsigned char*)(ImgSrc->imageData);
+	unsigned char *pDstData = (unsigned char*)(ImgDst_CPU->imageData);
+	int blocksPerGrid = (Size + threadsPerBlock - 1) / threadsPerBlock;
+
 	float elapsedTime;
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
-	FILE *fp;
 	
-	Signal = (int *)malloc(N * sizeof(int));
-	result = (element *)malloc(N * sizeof(element));
-	
-	for (int i = 0; i < N; i++)
-	{
-		Signal[i] = i % 5 + 1;
-	}
 	cudaEventRecord(start, 0);
-	medianfilter(Signal, result);
+	medianfilter<<<blocksPerGrid, threadsPerBlock>>>(pSrcData, pDstData, Size);
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime, start, stop);
 	printf("%lf.3 ms\n", elapsedTime);
 
-	fp = fopen("result.txt", "w");
-	if (fp == NULL)
-		printf("OPEN FILE FAILS!\n");
-	for (int i = 0; i < N; i ++)
-		fprintf(fp, "%d ", result[i]);
-
-	fclose(fp);
 	return 0;
 }
