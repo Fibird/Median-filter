@@ -6,6 +6,7 @@
 #define threadsPerBlock 256
 #define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
+#define TIMES 10
 // Signal/image element type
 typedef int element;
 //   1D MEDIAN FILTER implementation
@@ -79,7 +80,8 @@ void medianfilter(element* signal, element* result)
 	// Copies signal to device
 	cudaMemcpy(dev_extension, extension, (N + 2 * RADIUS) * sizeof(element), cudaMemcpyHostToDevice);
 	//   Call median filter implementation
-	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension, dev_result);
+	for (int i = 0; i < TIMES; ++i)
+		_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension, dev_result);
 	// Copies result to host
 	cudaMemcpy(result, dev_result, N * sizeof(element), cudaMemcpyDeviceToHost);
 
@@ -91,7 +93,7 @@ void medianfilter(element* signal, element* result)
 
 int main()
 {
-	int *Signal, *result;
+	element *Signal, *result;
 	float elapsedTime;
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
@@ -110,7 +112,7 @@ int main()
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime, start, stop);
-	printf("%lf.3 ms\n", elapsedTime);
+	printf("%.3lf ms\n", elapsedTime);
 
 	fp = fopen("result.txt", "w");
 	if (fp == NULL)
