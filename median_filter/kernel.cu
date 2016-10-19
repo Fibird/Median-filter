@@ -84,7 +84,8 @@ void medianfilter(element* signal, element* result)
 	// Copies signal to device
 	cudaMemcpy(dev_extension, extension, (N + 2 * RADIUS) * sizeof(element), cudaMemcpyHostToDevice);
 	//   Call median filter implementation
-	_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension + RADIUS, dev_result);
+	for (int i = 0; i < 10; ++i)
+		_medianfilter<<<blocksPerGrid, threadsPerBlock>>>(dev_extension + RADIUS, dev_result);
 	// Copies result to host
 	cudaMemcpy(result, dev_result, N * sizeof(element), cudaMemcpyDeviceToHost);
 
