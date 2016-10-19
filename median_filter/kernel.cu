@@ -6,6 +6,7 @@
 #define threadsPerBlock 256
 #define blocksPerGrid (N + threadsPerBlock - 1) / threadsPerBlock
 #define RADIUS 2
+#define TIMES 10		// The time of calling _medianfilter
 // Signal/image element type
 typedef int element;
 //   1D MEDIAN FILTER implementation
@@ -68,14 +69,15 @@ void medianfilter(element* signal, element* result)
 		extension[N + RADIUS + i] = signal[N - 1 - i];
 	}
 	//   Call median filter implementation
-	_medianfilter(extension, result ? result : signal, N + 2 * RADIUS);
+	for (int i = 0; i < TIMES; ++i)
+		_medianfilter(extension, result ? result : signal, N + 2 * RADIUS);
 	//   Free memory
 	delete[] extension;
 }
 
 int main()
 {
-	int *Signal, *result;
+	element *Signal, *result;
 	float elapsedTime;
 	clock_t start, stop;
 
@@ -94,7 +96,7 @@ int main()
 	
 	elapsedTime = 1000 * ((float) (stop - start)) / CLOCKS_PER_SEC;
 	
-	printf("%lf ms\n", elapsedTime);
+	printf("%.3lf ms\n", elapsedTime);
 
 	fp = fopen("result.txt", "w");
 	if (fp == NULL)
