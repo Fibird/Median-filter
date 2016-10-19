@@ -115,7 +115,7 @@ int main()
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime, start, stop);
-	printf("%lf.3 ms\n", elapsedTime);
+	printf("%.3lf ms\n", elapsedTime);
 
 	fp = fopen("result.txt", "w");
 	if (fp == NULL)
